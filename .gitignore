@@ -1,0 +1,19 @@
+# Sensitive — never commit real credentials
+config.php
+
+# Logs
+*.log
+error_log
+
+# OS junk
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# IDE folders
+.vscode/
+.idea/
+
+# User-uploaded images (keep the folder, ignore contents)
+/uploads/*
+!/uploads/.gitkeep
