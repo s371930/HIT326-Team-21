@@ -1,0 +1,65 @@
+/* ===================================================
+   Darwin Art Company — Custom Styles
+   =================================================== */
+
+/* Clean gallery font for body text */
+body {
+    font-family: 'Georgia', 'Times New Roman', serif;
+    background-color: #fafafa;
+    color: #333;
+}
+
+/* Navbar brand styling */
+.navbar-brand {
+    font-size: 1.4rem;
+    letter-spacing: 1px;
+}
+
+/* Art card hover effect */
+.card {
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+    border: none;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+.card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.15);
+}
+
+/* Product image placeholder (shown when no image file exists) */
+.img-placeholder {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    width: 100%;
+    height: 250px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-size: 1.1rem;
+    font-style: italic;
+}
+
+/* News section on home page */
+.news-section {
+    background-color: #fff;
+    border-left: 4px solid #0d6efd;
+    padding: 1.5rem;
+    margin-bottom: 2rem;
+    border-radius: 0 0.5rem 0.5rem 0;
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08);
+}
+
+/* Footer spacing */
+footer {
+    margin-top: auto;
+}
+
+/* Make body full height so footer stays at bottom */
+body {
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+}
+main.container {
+    flex: 1;
+}
