@@ -68,4 +68,78 @@ class Product
              ORDER BY category"
         );
     }
+
+    /**
+     * Get all products including unavailable ones (for admin panel).
+     */
+    public function getAllForAdmin(): array
+    {
+        return $this->db->fetchAll(
+            "SELECT * FROM product ORDER BY created_at DESC"
+        );
+    }
+
+    /**
+     * Get a product by ID regardless of availability (for admin edit).
+     */
+    public function getByIdForAdmin(int $id): ?array
+    {
+        return $this->db->fetchOne(
+            "SELECT * FROM product WHERE product_id = ?",
+            [$id]
+        );
+    }
+
+    /**
+     * Create a new product.
+     */
+    public function create(
+        string $name,
+        ?string $description,
+        float $price,
+        ?string $category,
+        ?string $color,
+        ?string $size,
+        ?string $imageFilename
+    ): int {
+        $this->db->execute(
+            "INSERT INTO product (name, description, price, category, color, size, image_filename, is_available)
+             VALUES (?, ?, ?, ?, ?, ?, ?, 1)",
+            [$name, $description, $price, $category, $color, $size, $imageFilename]
+        );
+        return $this->db->lastInsertId();
+    }
+
+    /**
+     * Update a product.
+     */
+    public function update(
+        int $id,
+        string $name,
+        ?string $description,
+        float $price,
+        ?string $category,
+        ?string $color,
+        ?string $size,
+        ?string $imageFilename
+    ): bool {
+        $result = $this->db->execute(
+            "UPDATE product SET name = ?, description = ?, price = ?, category = ?, color = ?, size = ?, image_filename = ?
+             WHERE product_id = ?",
+            [$name, $description, $price, $category, $color, $size, $imageFilename, $id]
+        );
+        return $result > 0;
+    }
+
+    /**
+     * Soft-delete a product (mark as unavailable).
+     */
+    public function softDelete(int $id): bool
+    {
+        $result = $this->db->execute(
+            "UPDATE product SET is_available = 0 WHERE product_id = ?",
+            [$id]
+        );
+        return $result > 0;
+    }
 }
