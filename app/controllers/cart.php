@@ -1,82 +1,121 @@
 <?php
-/**
- * Cart Controller
- * Stores cart items in the session. No database needed until checkout.
- */
+
 
 require_once __DIR__ . '/../models/Product.php';
+require_once __DIR__ . '/../core/Cart.php';
+
+Cart::init();
 
 $productModel = new Product();
+$action       = $_GET['action'] ?? null;
 
-// Initialise the cart array in session if it doesn't exist
-if (!isset($_SESSION['cart'])) {
-    $_SESSION['cart'] = [];
+
+function cart_wants_json(): bool
+{
+    if (isset($_GET['ajax']) || isset($_POST['ajax'])) {
+        return true;
+    }
+    return ($_SERVER['HTTP_X_REQUESTED_WITH'] ?? '') === 'XMLHttpRequest';
 }
 
-$action = $_GET['action'] ?? null;
+/** Send a JSON response and stop. */
+function cart_json(array $data): void
+{
+    header('Content-Type: application/json; charset=UTF-8');
+    echo json_encode($data);
+    exit;
+}
 
-// --- ADD item to cart ---
+/** Redirect back to the cart page (non-AJAX fallback). */
+function cart_redirect(): void
+{
+    header('Location: ' . BASE_URL . '/?page=cart');
+    exit;
+}
+
+// --- ADD item to cart 
 if ($action === 'add') {
-    $id = filter_input(INPUT_GET, 'id', FILTER_VALIDATE_INT);
-    if ($id) {
-        $product = $productModel->getById($id);
-        if ($product) {
-            // If already in cart, increase quantity
-            if (isset($_SESSION['cart'][$id])) {
-                $_SESSION['cart'][$id]['quantity']++;
-            } else {
-                $_SESSION['cart'][$id] = [
-                    'product_id' => $product['product_id'],
-                    'name'       => $product['name'],
-                    'price'      => $product['price'],
-                    'quantity'   => 1,
-                    'image'      => $product['image_filename'],
-                ];
-            }
-        }
+    $id      = filter_input(INPUT_GET, 'id', FILTER_VALIDATE_INT);
+    $product = $id ? $productModel->getById($id) : null;
+
+    if ($product) {
+        // Normalise to the shape Cart expects before storing it.
+        Cart::add([
+            'product_id' => $product['product_id'],
+            'name'       => $product['name'],
+            'price'      => $product['price'],
+            'image'      => $product['image_filename'],
+        ]);
     }
-    header('Location: ' . BASE_URL . '/?page=cart');
-    exit;
+
+    if (cart_wants_json()) {
+        cart_json([
+            'ok'         => (bool) $product,
+            'cart_total' => Cart::total(),
+            'cart_count' => Cart::count(),
+        ]);
+    }
+    cart_redirect();
 }
 
-// --- REMOVE item from cart ---
+// --- REMOVE item from cart 
 if ($action === 'remove') {
-    $id = filter_input(INPUT_GET, 'id', FILTER_VALIDATE_INT);
-    if ($id && isset($_SESSION['cart'][$id])) {
-        unset($_SESSION['cart'][$id]);
+    $id = filter_input(INPUT_GET, 'id', FILTER_VALIDATE_INT)
+        ?: filter_input(INPUT_POST, 'id', FILTER_VALIDATE_INT);
+
+    if ($id) {
+        Cart::remove($id);
     }
-    header('Location: ' . BASE_URL . '/?page=cart');
-    exit;
+
+    if (cart_wants_json()) {
+        cart_json([
+            'ok'         => true,
+            'removed'    => (int) $id,
+            'cart_total' => Cart::total(),
+            'cart_count' => Cart::count(),
+        ]);
+    }
+    cart_redirect();
 }
 
-// --- UPDATE quantities (from form submission) ---
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($action ?? '') === 'update') {
+// --- UPDATE quantities 
+if ($action === 'update' && $_SERVER['REQUEST_METHOD'] === 'POST') {
+
+    // AJAX single-line update: { id, qty }
+    if (cart_wants_json()) {
+        $id  = filter_input(INPUT_POST, 'id',  FILTER_VALIDATE_INT);
+        $qty = filter_input(INPUT_POST, 'qty', FILTER_VALIDATE_INT);
+
+        if ($id) {
+            Cart::setQty($id, (int) $qty); // 0 (or less) removes the line
+        }
+
+        $line = $id ? Cart::get($id) : null;
+        cart_json([
+            'ok'            => true,
+            'removed'       => $line === null,
+            'line_quantity' => $line['quantity'] ?? 0,
+            'line_subtotal' => $id ? Cart::lineSubtotal($id) : 0,
+            'cart_total'    => Cart::total(),
+            'cart_count'    => Cart::count(),
+        ]);
+    }
+
+    // Non-AJAX bulk update from the cart form: qty[ID] = Q
     $quantities = $_POST['qty'] ?? [];
     foreach ($quantities as $id => $qty) {
-        $id  = (int) $id;
-        $qty = (int) $qty;
-        if ($qty <= 0) {
-            unset($_SESSION['cart'][$id]);
-        } elseif (isset($_SESSION['cart'][$id])) {
-            $_SESSION['cart'][$id]['quantity'] = $qty;
-        }
+        Cart::setQty((int) $id, (int) $qty);
     }
-    header('Location: ' . BASE_URL . '/?page=cart');
-    exit;
+    cart_redirect();
 }
 
-// Calculate totals for the view
-$cartItems = $_SESSION['cart'];
-$cartTotal = 0;
-foreach ($cartItems as $item) {
-    $cartTotal += $item['price'] * $item['quantity'];
-}
+// --- Render the cart page 
+$cartItems = Cart::items();
+$cartTotal = Cart::total();
 
-// Set page variables
 $pageTitle   = 'Shopping Cart — Darwin Art Company';
 $currentPage = 'cart';
 
-// Load views
 require_once __DIR__ . '/../views/header.php';
 require_once __DIR__ . '/../views/cart.php';
 require_once __DIR__ . '/../views/footer.php';

@@ -1,12 +1,5 @@
 <?php
-/**
- * News Model
- * Handles database queries for the news feature.
- *
- * Project requirement (Option 2, Feature A):
- * "Only the most recent message is to appear on the front page
- *  with no option for readers to read older posts."
- */
+
 
 class News
 {
@@ -17,11 +10,7 @@ class News
         $this->db = Database::getInstance();
     }
 
-    /**
-     * Get the single most recent news item.
-     * Uses ORDER BY posted_at DESC LIMIT 1 to return only the latest.
-     * Returns null if no news exists yet.
-     */
+   
     public function getLatest(): ?array
     {
         return $this->db->fetchOne(
@@ -32,10 +21,7 @@ class News
         );
     }
 
-    /**
-     * Get all news items (for admin management only).
-     * Ordered newest first.
-     */
+  
     public function getAll(): array
     {
         return $this->db->fetchAll(

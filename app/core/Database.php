@@ -1,50 +1,5 @@
 <?php
-/**
- * Database — PDO wrapper with prepared-statement helpers
- *
- * Singleton class providing safe database access across the application.
- * Every database query in the project goes through this class to ensure:
- *
- *   1. Consistent connection management (one connection per request)
- *   2. Mandatory use of real prepared statements (resistant to SQL injection)
- *   3. Centralised, environment-aware error handling
- *
- * Quick usage:
- *
- *   require_once __DIR__ . '/../core/Database.php';
- *   $db = Database::getInstance();
- *
- *   // Fetch many rows
- *   $products = $db->fetchAll(
- *       "SELECT * FROM product WHERE is_available = ?",
- *       [1]
- *   );
- *
- *   // Fetch one row (or null)
- *   $admin = $db->fetchOne(
- *       "SELECT * FROM admin WHERE username = ?",
- *       [$username]
- *   );
- *
- *   // Insert / update / delete (returns affected row count)
- *   $db->execute(
- *       "UPDATE product SET is_available = ? WHERE product_id = ?",
- *       [0, $productId]
- *   );
- *   $newId = $db->lastInsertId();
- *
- *   // Multi-step writes (e.g. purchase + items together)
- *   $db->beginTransaction();
- *   try {
- *       $db->execute("INSERT INTO purchase ...", [...]);
- *       $purchaseId = $db->lastInsertId();
- *       $db->execute("INSERT INTO purchase_item ...", [...]);
- *       $db->commit();
- *   } catch (Exception $e) {
- *       $db->rollback();
- *       throw $e;
- *   }
- */
+
 
 require_once __DIR__ . '/../../config.php';
 

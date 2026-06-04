@@ -1,60 +1,11 @@
 <?php
-/**
- * Auth — Authentication helpers
- *
- * Centralises password hashing and admin session management.
- * The admin panel and any controller that gates content goes through
- * the static methods on this class.
- *
- * Quick usage:
- *
- *   require_once __DIR__ . '/../core/Auth.php';
- *
- *   // Start the session (call once at the top of every entry point)
- *   Auth::start();
- *
- *   // Verifying a login form submission
- *   $admin = $db->fetchOne(
- *       "SELECT admin_id, username, password_hash FROM admin WHERE username = ?",
- *       [$username]
- *   );
- *   if ($admin && Auth::verifyPassword($password, $admin['password_hash'])) {
- *       Auth::login($admin);
- *       header('Location: dashboard.php');
- *       exit;
- *   }
- *
- *   // Protect an admin page (put this at the top, before any output)
- *   Auth::requireLogin();
- *
- *   // Read the current user
- *   $me = Auth::getCurrentAdmin();   // null if not logged in
- *
- *   // Log out
- *   Auth::logout();
- *
- *   // Creating / changing a password (e.g. when seeding or letting an
- *   // admin change their own password)
- *   $hash = Auth::hashPassword($plainTextPassword);
- *   $db->execute(
- *       "UPDATE admin SET password_hash = ? WHERE admin_id = ?",
- *       [$hash, $adminId]
- *   );
- */
+
 
 require_once __DIR__ . '/../../config.php';
 
 class Auth
 {
-    /**
-     * Start the session with hardened settings.
-     * Safe to call multiple times — does nothing if already started.
-     *
-     * Security settings applied:
-     *   - HttpOnly: cookie can't be read by JavaScript (XSS mitigation)
-     *   - SameSite=Lax: cookie not sent on cross-site POSTs (CSRF mitigation)
-     *   - Custom session name from config (avoids the default PHPSESSID)
-     */
+    
     public static function start(): void
     {
         if (session_status() === PHP_SESSION_ACTIVE) {

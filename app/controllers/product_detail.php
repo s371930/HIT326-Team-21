@@ -1,8 +1,4 @@
 <?php
-/**
- * Product Detail Controller
- * Shows a single artwork with full details.
- */
 
 require_once __DIR__ . '/../models/Product.php';
 

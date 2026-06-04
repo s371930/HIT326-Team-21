@@ -104,7 +104,7 @@ $pageTitle = 'Admin Dashboard — Darwin Art Company';
             </div>
         <?php endif; ?>
 
-        <a href="<?= BASE_URL ?>/" class="text-secondary">&larr; Back to site</a>
+        <a href="<?= BASE_URL ?>/admin/index.php" class="text-secondary">&larr; Back to Admin Panel</a>
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
