@@ -1,19 +1,4 @@
 <?php
-/**
- * Checkout Controller
- * Collects customer details and saves the order to the database.
- *
- * The whole order is written inside a single transaction so a purchase can
- * never exist without its line items (or vice versa). On success we stash a
- * summary in the session and redirect to the confirmation page (Post/
- * Redirect/Get) so a browser refresh can't place the order twice.
- *
- * NOTE FOR THE TEAM: the customer + purchase + purchase_item writes are kept
- * inline here for now. When Tithila's Customer / Purchase / PurchaseItem
- * models land, swap the SQL below for model calls — but the transaction must
- * stay owned by ONE place. PDO does not support nested transactions, so if a
- * model method opens its own transaction, do NOT also wrap it here.
- */
 
 require_once __DIR__ . '/../models/Product.php';
 require_once __DIR__ . '/../core/Cart.php';
@@ -29,9 +14,6 @@ if (Cart::isEmpty()) {
 
 $productModel = new Product();
 
-// Re-fetch every cart line from the database. This gives us the authoritative
-// price "at the time of sale" and confirms the artwork is still available
-// (getById returns null for missing or soft-deleted products).
 $lineItems   = [];
 $unavailable = [];
 foreach (Cart::items() as $id => $item) {
@@ -120,9 +102,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
             $db->commit();
 
-            // Stash a summary for the confirmation page + Mailer, in the exact
-            // shape Mailer expects (purchase_id, customer_name, customer_email,
-            // delivery_address, total_amount, items => [name, quantity, price]).
+          
             $_SESSION['last_order'] = [
                 'purchase_id'      => $purchaseId,
                 'customer_name'    => $old['first_name'] . ' ' . $old['last_name'],

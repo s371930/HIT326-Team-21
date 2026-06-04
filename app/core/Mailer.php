@@ -1,31 +1,5 @@
 <?php
-/**
- * app/core/Mailer.php
- *
- * Email dispatch helper for the two automated emails the system sends
- * after a successful order:
- *   - sendBuyerConfirmation($order)  — confirms the order to the customer
- *   - sendOwnerNotification($order)  — alerts the store owner of a new sale
- *
- * WHY SMTP (and not PHP's mail()):
- *   PHP's built-in mail() cannot authenticate with a username/password, so
- *   it cannot deliver to Mailtrap (or any modern SMTP relay). This class
- *   therefore speaks SMTP directly using the credentials in config.php,
- *   which is what lets Mailtrap catch our development emails.
- *
- *   It is dependency-free (no Composer / PHPMailer required) so it runs on a
- *   stock XAMPP install. It supports STARTTLS (recommended) or a plain
- *   connection, selected via MAIL_ENCRYPTION in config.php.
- *
- * Configure these in config.php (see config.example.php):
- *   MAIL_HOST, MAIL_PORT, MAIL_USERNAME, MAIL_PASSWORD, MAIL_ENCRYPTION,
- *   MAIL_FROM_ADDRESS, MAIL_FROM_NAME, MAIL_OWNER_ADDRESS
- *
- * Expected $order array keys:
- *   purchase_id, customer_name, customer_email,
- *   delivery_address, total_amount,
- *   items => [ [name, quantity, price], ... ]
- */
+
 
 require_once __DIR__ . '/../../config.php';
 
@@ -53,9 +27,9 @@ class Mailer
         return self::send($to, $subject, $body, $order['customer_email']);
     }
 
-    // ------------------------------------------------------------------
+
     // Config helpers (with sensible fallbacks so nothing fatals if unset)
-    // ------------------------------------------------------------------
+
     private static function fromAddress(): string
     {
         return defined('MAIL_FROM_ADDRESS') ? MAIL_FROM_ADDRESS : 'noreply@darwin-art-store.local';
@@ -69,9 +43,9 @@ class Mailer
         return defined('MAIL_OWNER_ADDRESS') ? MAIL_OWNER_ADDRESS : 'owner@darwin-art-store.local';
     }
 
-    // ------------------------------------------------------------------
+  
     // Email bodies (unchanged content)
-    // ------------------------------------------------------------------
+
     private static function buildBuyerBody(array $order): string
     {
         $name    = htmlspecialchars($order['customer_name'],    ENT_QUOTES, 'UTF-8');
@@ -140,9 +114,9 @@ TEXT;
         return implode("\n", $lines);
     }
 
-    // ------------------------------------------------------------------
+   
     // SMTP transport
-    // ------------------------------------------------------------------
+   
 
     /**
      * Send one message. Uses authenticated SMTP when MAIL_HOST is configured
