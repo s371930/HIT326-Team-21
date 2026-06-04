@@ -1,18 +1,5 @@
 <?php
-/**
- * Cart Controller
- * Stores cart items in the session via the Cart helper. No database is
- * touched here except to validate a product when it is first added.
- *
- * Actions (via ?page=cart&action=...):
- *   add     (GET)  ?id=N           add one of product N
- *   remove  (GET)  ?id=N           remove product N
- *   update  (POST) qty[N]=Q ...    bulk update from the cart form
- *
- * Each action also supports an AJAX variant (cart.js). When the request
- * is AJAX we return JSON and exit; otherwise we redirect back to the cart
- * so the page keeps working with JavaScript disabled.
- */
+
 
 require_once __DIR__ . '/../models/Product.php';
 require_once __DIR__ . '/../core/Cart.php';
@@ -22,7 +9,7 @@ Cart::init();
 $productModel = new Product();
 $action       = $_GET['action'] ?? null;
 
-/** Is this an AJAX (fetch) request rather than a normal page navigation? */
+
 function cart_wants_json(): bool
 {
     if (isset($_GET['ajax']) || isset($_POST['ajax'])) {
@@ -46,7 +33,7 @@ function cart_redirect(): void
     exit;
 }
 
-// --- ADD item to cart -------------------------------------------------------
+// --- ADD item to cart 
 if ($action === 'add') {
     $id      = filter_input(INPUT_GET, 'id', FILTER_VALIDATE_INT);
     $product = $id ? $productModel->getById($id) : null;
@@ -71,7 +58,7 @@ if ($action === 'add') {
     cart_redirect();
 }
 
-// --- REMOVE item from cart --------------------------------------------------
+// --- REMOVE item from cart 
 if ($action === 'remove') {
     $id = filter_input(INPUT_GET, 'id', FILTER_VALIDATE_INT)
         ?: filter_input(INPUT_POST, 'id', FILTER_VALIDATE_INT);
@@ -91,7 +78,7 @@ if ($action === 'remove') {
     cart_redirect();
 }
 
-// --- UPDATE quantities ------------------------------------------------------
+// --- UPDATE quantities 
 if ($action === 'update' && $_SERVER['REQUEST_METHOD'] === 'POST') {
 
     // AJAX single-line update: { id, qty }
@@ -122,7 +109,7 @@ if ($action === 'update' && $_SERVER['REQUEST_METHOD'] === 'POST') {
     cart_redirect();
 }
 
-// --- Render the cart page ---------------------------------------------------
+// --- Render the cart page 
 $cartItems = Cart::items();
 $cartTotal = Cart::total();
 

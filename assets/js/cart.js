@@ -1,15 +1,4 @@
-/**
- * cart.js — front-end behaviours for the shopping cart page.
- *
- * Progressive enhancement: the cart form and the Remove links work without
- * JavaScript (plain POST / GET to the cart controller). This script layers
- * on quantity steppers, client-side validation, AJAX updates, and live
- * total recalculation so the page never does a full reload.
- *
- * The server is always authoritative: every AJAX call re-validates on the
- * PHP side and returns the real totals, which we then render. The instant
- * client-side recalculation is just for responsiveness.
- */
+
 (function () {
     "use strict";
 

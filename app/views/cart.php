@@ -68,7 +68,6 @@
         </div>
     </form>
 
-    <!-- Progressive enhancement: steppers, live totals, AJAX update/remove.
-         The form above works on its own if this script doesn't load. -->
+  
     <script src="<?= BASE_URL ?>/assets/js/cart.js"></script>
 <?php endif; ?>

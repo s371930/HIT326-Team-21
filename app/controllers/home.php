@@ -1,8 +1,5 @@
 <?php
-/**
- * Home Controller
- * Loads the latest news and featured artworks for the home page.
- */
+
 
 require_once __DIR__ . '/../models/News.php';
 require_once __DIR__ . '/../models/Product.php';

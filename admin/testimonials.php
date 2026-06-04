@@ -32,15 +32,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $testimonialId = filter_input(INPUT_POST, 'testimonial_id', FILTER_VALIDATE_INT);
 
     if ($testimonialId) {
-        if ($action === 'approve') {
-            // Approve — testimonial will now show on the public page
-            $testimonialModel->approve($testimonialId, $admin['admin_id']);
-            $message = 'Testimonial approved and published.';
-        } elseif ($action === 'reject') {
-            // Reject — testimonial will not be shown publicly
-            $testimonialModel->reject($testimonialId, $admin['admin_id']);
-            $message = 'Testimonial rejected.';
-            $msgType = 'warning';
+        try {
+            if ($action === 'approve') {
+                // Approve — testimonial will now show on the public page
+                $testimonialModel->approve($testimonialId, $admin['admin_id']);
+                $message = 'Testimonial approved and published.';
+            } elseif ($action === 'reject') {
+                // Reject — testimonial will not be shown publicly
+                $testimonialModel->reject($testimonialId, $admin['admin_id']);
+                $message = 'Testimonial rejected.';
+                $msgType = 'warning';
+            }
+        } catch (Exception $e) {
+            $message = 'Error processing testimonial: ' . htmlspecialchars($e->getMessage(), ENT_QUOTES, 'UTF-8');
+            $msgType = 'danger';
         }
     }
 }
