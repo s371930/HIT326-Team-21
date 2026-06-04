@@ -1,11 +1,9 @@
 <?php
 /**
- * Admin model
- *
- * Manages admin user accounts.
+ * Admin Model
+ * Handles database queries for administrator accounts.
+ * Passwords are stored as bcrypt hashes using PHP's password_hash().
  */
-
-require_once __DIR__ . '/../core/Database.php';
 
 class Admin
 {
@@ -18,73 +16,82 @@ class Admin
 
     /**
      * Find an admin by username.
-     *
-     * @param string $username
-     * @return array|null Admin row or null if not found
+     * Returns the admin record or null if not found.
+     * Includes the password_hash for authentication.
      */
     public function findByUsername(string $username): ?array
     {
         return $this->db->fetchOne(
-            "SELECT * FROM admin WHERE username = ?",
+            "SELECT admin_id, username, password_hash, created_at
+             FROM admin
+             WHERE username = ?",
             [$username]
         );
     }
 
     /**
      * Get an admin by ID.
-     *
-     * @param int $adminId
-     * @return array|null Admin row or null if not found
      */
-    public function getById(int $adminId): ?array
+    public function getById(int $id): ?array
     {
         return $this->db->fetchOne(
-            "SELECT * FROM admin WHERE admin_id = ?",
-            [$adminId]
+            "SELECT admin_id, username, created_at
+             FROM admin
+             WHERE admin_id = ?",
+            [$id]
         );
     }
 
     /**
-     * Get all admins.
-     *
-     * @return array List of admin records
+     * Get all administrator accounts (for admin management).
+     * Does NOT include password hashes to prevent accidental exposure.
      */
     public function getAll(): array
     {
         return $this->db->fetchAll(
-            "SELECT admin_id, username, created_at FROM admin ORDER BY created_at DESC"
+            "SELECT admin_id, username, created_at
+             FROM admin
+             ORDER BY created_at ASC"
         );
     }
 
     /**
-     * Create a new admin user.
-     *
-     * @param string $username
-     * @param string $passwordHash (use Auth::hashPassword() to generate this)
-     * @return int The new admin_id
+     * Create a new admin account.
+     * The password must be pre-hashed using Auth::hashPassword().
+     * Returns the new admin_id.
      */
-    public function create(string $username, string $passwordHash): int
+    public function create(string $username, string $password_hash): int
     {
         $this->db->execute(
-            "INSERT INTO admin (username, password_hash) VALUES (?, ?)",
-            [$username, $passwordHash]
+            "INSERT INTO admin (username, password_hash)
+             VALUES (?, ?)",
+            [$username, $password_hash]
         );
-        return $this->db->lastInsertId();
+
+        return (int) $this->db->lastInsertId();
     }
 
     /**
      * Update an admin's password.
-     *
-     * @param int $adminId
-     * @param string $passwordHash (use Auth::hashPassword() to generate this)
-     * @return bool True if successful
+     * The new password must be pre-hashed using Auth::hashPassword().
+     * Returns the number of rows affected.
      */
-    public function updatePassword(int $adminId, string $passwordHash): bool
+    public function updatePassword(int $admin_id, string $password_hash): int
     {
-        $result = $this->db->execute(
+        return $this->db->execute(
             "UPDATE admin SET password_hash = ? WHERE admin_id = ?",
-            [$passwordHash, $adminId]
+            [$password_hash, $admin_id]
         );
-        return $result > 0;
+    }
+
+    /**
+     * Delete an admin account (rarely used, typically soft-delete via foreign key policy).
+     */
+    public function delete(int $admin_id): int
+    {
+        return $this->db->execute(
+            "DELETE FROM admin WHERE admin_id = ?",
+            [$admin_id]
+        );
     }
 }
