@@ -1,11 +1,9 @@
 <?php
 /**
- * PurchaseItem model
- *
- * Manages line items within a purchase (order).
+ * PurchaseItem Model
+ * Handles database queries for line items within orders.
+ * Each row represents one artwork purchased in one order.
  */
-
-require_once __DIR__ . '/../core/Database.php';
 
 class PurchaseItem
 {
@@ -17,58 +15,60 @@ class PurchaseItem
     }
 
     /**
-     * Get all line items for a purchase.
-     *
-     * @param int $purchaseId
-     * @return array List of purchase items
+     * Get a single purchase item by ID.
      */
-    public function getByPurchase(int $purchaseId): array
+    public function getById(int $id): ?array
+    {
+        return $this->db->fetchOne(
+            "SELECT purchase_item_id, purchase_id, product_id, quantity, unit_price
+             FROM purchase_item
+             WHERE purchase_item_id = ?",
+            [$id]
+        );
+    }
+
+    /**
+     * Get all line items for a specific purchase.
+     * Ordered by item ID for consistent output.
+     */
+    public function getByPurchase(int $purchase_id): array
     {
         return $this->db->fetchAll(
-            "SELECT pi.*, p.name, p.image_filename FROM purchase_item pi
-             JOIN product p ON pi.product_id = p.product_id
-             WHERE pi.purchase_id = ?
-             ORDER BY pi.purchase_item_id",
-            [$purchaseId]
+            "SELECT purchase_item_id, purchase_id, product_id, quantity, unit_price
+             FROM purchase_item
+             WHERE purchase_id = ?
+             ORDER BY purchase_item_id ASC",
+            [$purchase_id]
         );
     }
 
     /**
      * Create a single purchase line item.
-     *
-     * @param int $purchaseId
-     * @param int $productId
-     * @param int $quantity
-     * @param float $unitPrice
-     * @return int The new purchase_item_id
+     * Returns the new purchase_item_id.
      */
-    public function create(
-        int $purchaseId,
-        int $productId,
-        int $quantity,
-        float $unitPrice
-    ): int {
+    public function create(int $purchase_id, int $product_id, int $quantity, float $unit_price): int
+    {
         $this->db->execute(
             "INSERT INTO purchase_item (purchase_id, product_id, quantity, unit_price)
              VALUES (?, ?, ?, ?)",
-            [$purchaseId, $productId, $quantity, $unitPrice]
+            [$purchase_id, $product_id, $quantity, $unit_price]
         );
-        return $this->db->lastInsertId();
+
+        return (int) $this->db->lastInsertId();
     }
 
     /**
-     * Create multiple line items at once.
-     * Expects an array of arrays, each with keys: product_id, quantity, unit_price.
-     *
-     * @param int $purchaseId
-     * @param array $items Array of arrays with product_id, quantity, unit_price
-     * @return void
+     * Create multiple purchase items at once.
+     * Useful within a transaction to add several items to a purchase.
+     * 
+     * @param int $purchase_id
+     * @param array $items Array of ['product_id' => int, 'quantity' => int, 'unit_price' => float]
      */
-    public function createMany(int $purchaseId, array $items): void
+    public function createMany(int $purchase_id, array $items): void
     {
         foreach ($items as $item) {
             $this->create(
-                $purchaseId,
+                $purchase_id,
                 $item['product_id'],
                 $item['quantity'],
                 $item['unit_price']
@@ -77,18 +77,13 @@ class PurchaseItem
     }
 
     /**
-     * Get a single purchase item by ID.
-     *
-     * @param int $purchaseItemId
-     * @return array|null
+     * Delete a purchase item (rarely used, typically via cascade on purchase delete).
      */
-    public function getById(int $purchaseItemId): ?array
+    public function delete(int $purchase_item_id): int
     {
-        return $this->db->fetchOne(
-            "SELECT pi.*, p.name FROM purchase_item pi
-             JOIN product p ON pi.product_id = p.product_id
-             WHERE pi.purchase_item_id = ?",
-            [$purchaseItemId]
+        return $this->db->execute(
+            "DELETE FROM purchase_item WHERE purchase_item_id = ?",
+            [$purchase_item_id]
         );
     }
 }

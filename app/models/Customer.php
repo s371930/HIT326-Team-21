@@ -1,11 +1,9 @@
 <?php
 /**
- * Customer model
- *
- * Manages customer records (guest checkout).
+ * Customer Model
+ * Handles database queries for customer records.
+ * One row per unique email (guest checkout model).
  */
-
-require_once __DIR__ . '/../core/Database.php';
 
 class Customer
 {
@@ -17,74 +15,90 @@ class Customer
     }
 
     /**
-     * Find a customer by email.
-     *
-     * @param string $email
-     * @return array|null Customer row or null if not found
+     * Find a customer by email address.
+     * Returns the customer record or null if not found.
      */
     public function findByEmail(string $email): ?array
     {
         return $this->db->fetchOne(
-            "SELECT * FROM customer WHERE email = ?",
+            "SELECT customer_id, email, first_name, last_name, phone, created_at
+             FROM customer
+             WHERE email = ?",
             [$email]
         );
     }
 
     /**
      * Get a customer by ID.
-     *
-     * @param int $customerId
-     * @return array|null Customer row or null if not found
      */
-    public function getById(int $customerId): ?array
+    public function getById(int $id): ?array
     {
         return $this->db->fetchOne(
-            "SELECT * FROM customer WHERE customer_id = ?",
-            [$customerId]
+            "SELECT customer_id, email, first_name, last_name, phone, created_at
+             FROM customer
+             WHERE customer_id = ?",
+            [$id]
         );
     }
 
     /**
-     * Create a new customer.
-     *
-     * @param string $email
-     * @param string $firstName
-     * @param string $lastName
-     * @param string|null $phone
-     * @return int The new customer_id
+     * Get all customers (for admin reporting).
      */
-    public function create(
-        string $email,
-        string $firstName,
-        string $lastName,
-        ?string $phone = null
-    ): int {
-        $this->db->execute(
-            "INSERT INTO customer (email, first_name, last_name, phone) VALUES (?, ?, ?, ?)",
-            [$email, $firstName, $lastName, $phone]
+    public function getAll(): array
+    {
+        return $this->db->fetchAll(
+            "SELECT customer_id, email, first_name, last_name, phone, created_at
+             FROM customer
+             ORDER BY created_at DESC"
         );
-        return $this->db->lastInsertId();
+    }
+
+    /**
+     * Create a new customer record.
+     * Returns the new customer_id.
+     * Throws exception if email already exists (enforced by UNIQUE constraint).
+     */
+    public function create(string $email, string $first_name, string $last_name, ?string $phone = null): int
+    {
+        $this->db->execute(
+            "INSERT INTO customer (email, first_name, last_name, phone)
+             VALUES (?, ?, ?, ?)",
+            [$email, $first_name, $last_name, $phone]
+        );
+
+        return (int) $this->db->lastInsertId();
     }
 
     /**
      * Update customer details.
-     *
-     * @param int $customerId
-     * @param string $firstName
-     * @param string $lastName
-     * @param string|null $phone
-     * @return bool True if successful
+     * Returns the number of rows affected.
      */
-    public function update(
-        int $customerId,
-        string $firstName,
-        string $lastName,
-        ?string $phone = null
-    ): bool {
-        $result = $this->db->execute(
-            "UPDATE customer SET first_name = ?, last_name = ?, phone = ? WHERE customer_id = ?",
-            [$firstName, $lastName, $phone, $customerId]
-        );
-        return $result > 0;
+    public function update(int $customer_id, array $data): int
+    {
+        $updates = [];
+        $params = [];
+
+        // Allow updates to first_name, last_name, phone
+        if (isset($data['first_name'])) {
+            $updates[] = "first_name = ?";
+            $params[] = $data['first_name'];
+        }
+        if (isset($data['last_name'])) {
+            $updates[] = "last_name = ?";
+            $params[] = $data['last_name'];
+        }
+        if (isset($data['phone'])) {
+            $updates[] = "phone = ?";
+            $params[] = $data['phone'];
+        }
+
+        if (empty($updates)) {
+            return 0;
+        }
+
+        $params[] = $customer_id;
+        $sql = "UPDATE customer SET " . implode(", ", $updates) . " WHERE customer_id = ?";
+
+        return $this->db->execute($sql, $params);
     }
 }

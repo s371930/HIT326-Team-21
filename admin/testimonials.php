@@ -7,7 +7,6 @@
  *
  * Project requirement (Option 2, Feature B):
  * "These would have to be moderated by the company before they are published."
- *
  */
 
 require_once __DIR__ . '/../config.php';

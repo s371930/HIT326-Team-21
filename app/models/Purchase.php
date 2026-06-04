@@ -1,12 +1,9 @@
 <?php
 /**
- * Purchase model
- *
- * Manages customer orders. Uses transactions to ensure data consistency
- * when creating an order with multiple line items.
+ * Purchase Model
+ * Handles database queries for order (purchase) records.
+ * Supports transactions for atomicity when inserting purchases + line items together.
  */
-
-require_once __DIR__ . '/../core/Database.php';
 
 class Purchase
 {
@@ -19,75 +16,83 @@ class Purchase
 
     /**
      * Get a purchase by ID.
-     *
-     * @param int $purchaseId
-     * @return array|null Purchase row or null if not found
+     * Returns the purchase record or null if not found.
      */
-    public function getById(int $purchaseId): ?array
+    public function getById(int $id): ?array
     {
         return $this->db->fetchOne(
-            "SELECT * FROM purchase WHERE purchase_id = ?",
-            [$purchaseId]
+            "SELECT purchase_id, customer_id, purchase_date, total_amount, 
+                    delivery_address, status
+             FROM purchase
+             WHERE purchase_id = ?",
+            [$id]
         );
     }
 
     /**
-     * Get all purchases by customer ID.
-     *
-     * @param int $customerId
-     * @return array List of purchases
+     * Get all purchases (for admin reporting).
      */
-    public function getByCustomerId(int $customerId): array
+    public function getAll(): array
     {
         return $this->db->fetchAll(
-            "SELECT * FROM purchase WHERE customer_id = ? ORDER BY purchase_date DESC",
-            [$customerId]
+            "SELECT purchase_id, customer_id, purchase_date, total_amount, 
+                    delivery_address, status
+             FROM purchase
+             ORDER BY purchase_date DESC"
         );
     }
 
     /**
-     * Create a new purchase (order header).
-     * This is typically paired with PurchaseItem::createMany() to add line items.
-     *
-     * @param int $customerId
-     * @param float $totalAmount
-     * @param string $deliveryAddress
-     * @param string $status 'pending' or 'confirmed'
+     * Get purchases for a specific customer.
+     */
+    public function getByCustomer(int $customer_id): array
+    {
+        return $this->db->fetchAll(
+            "SELECT purchase_id, customer_id, purchase_date, total_amount, 
+                    delivery_address, status
+             FROM purchase
+             WHERE customer_id = ?
+             ORDER BY purchase_date DESC",
+            [$customer_id]
+        );
+    }
+
+    /**
+     * Create a new purchase record (typically as part of a transaction).
+     * Returns the new purchase_id.
+     * 
+     * @param int $customer_id
+     * @param decimal $total_amount
+     * @param string $delivery_address
      * @return int The new purchase_id
      */
-    public function create(
-        int $customerId,
-        float $totalAmount,
-        string $deliveryAddress,
-        string $status = 'pending'
-    ): int {
+    public function create(int $customer_id, float $total_amount, string $delivery_address): int
+    {
         $this->db->execute(
             "INSERT INTO purchase (customer_id, total_amount, delivery_address, status)
-             VALUES (?, ?, ?, ?)",
-            [$customerId, $totalAmount, $deliveryAddress, $status]
+             VALUES (?, ?, ?, 'pending')",
+            [$customer_id, $total_amount, $delivery_address]
         );
-        return $this->db->lastInsertId();
+
+        return (int) $this->db->lastInsertId();
     }
 
     /**
-     * Update purchase status.
-     *
-     * @param int $purchaseId
-     * @param string $status 'pending' or 'confirmed'
-     * @return bool True if successful
+     * Update the status of a purchase.
+     * Valid statuses: 'pending', 'confirmed'
+     * Returns the number of rows affected.
      */
-    public function updateStatus(int $purchaseId, string $status): bool
+    public function updateStatus(int $purchase_id, string $status): int
     {
-        $result = $this->db->execute(
+        return $this->db->execute(
             "UPDATE purchase SET status = ? WHERE purchase_id = ?",
-            [$status, $purchaseId]
+            [$status, $purchase_id]
         );
-        return $result > 0;
     }
 
     /**
-     * Begin a transaction for multi-step writes.
-     * Call this before creating a purchase and its items, then commit() or rollback().
+     * Begin a transaction.
+     * Use when creating a purchase + its line items atomically.
      */
     public function beginTransaction(): void
     {
@@ -95,7 +100,7 @@ class Purchase
     }
 
     /**
-     * Commit the current transaction.
+     * Commit the active transaction.
      */
     public function commit(): void
     {
@@ -103,7 +108,7 @@ class Purchase
     }
 
     /**
-     * Rollback the current transaction.
+     * Roll back the active transaction.
      */
     public function rollback(): void
     {
