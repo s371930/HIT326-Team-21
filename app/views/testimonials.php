@@ -1,56 +1,4 @@
 <?php
-/**
- * app/views/testimonials.php
- *
- * Public testimonials page — shows all approved testimonials and
- * provides a form for customers to submit their own.
- *
- * Project requirement (Option 2, Feature B):
- * "The testimonials would be presented on a separate page,
- *  with a link from the front page."
- *
- * Submitted testimonials are marked 'pending' and must be approved
- * by an admin before they appear on this page.
- */
-
-require_once __DIR__ . '/../../config.php';
-require_once __DIR__ . '/../core/Database.php';
-require_once __DIR__ . '/../models/Testimonial.php';
-
-$testimonialModel = new Testimonial();
-
-// Holds form feedback message
-$message = '';
-$msgType = 'success';
-
-// Handle testimonial submission form
-if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    // Sanitise all inputs before using them
-    $customerName = trim($_POST['customer_name'] ?? '');
-    $email        = trim($_POST['email'] ?? '');
-    $content      = trim($_POST['content'] ?? '');
-
-    // Server-side validation — all fields required
-    if ($customerName === '' || $email === '' || $content === '') {
-        $message = 'Please fill in all fields.';
-        $msgType = 'danger';
-    } elseif (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
-        // Validate email format
-        $message = 'Please enter a valid email address.';
-        $msgType = 'danger';
-    } else {
-        // Save the testimonial — status defaults to 'pending'
-        $testimonialModel->create($customerName, $email, $content);
-        $message = 'Thank you! Your testimonial has been submitted and will appear after review.';
-        $msgType = 'success';
-    }
-}
-
-// Fetch all approved testimonials for display
-$approvedTestimonials = $testimonialModel->getApproved();
-
-$pageTitle   = 'Testimonials — Darwin Art Company';
-$currentPage = 'testimonials';
 ?>
 <?php require_once __DIR__ . '/header.php'; ?>
 
@@ -91,7 +39,7 @@ $currentPage = 'testimonials';
 
             <!-- Feedback message after submission -->
             <?php if ($message !== ''): ?>
-                <div class="alert alert-<?= $msgType ?>">
+                <div class="alert alert-<?= htmlspecialchars($msgType, ENT_QUOTES, 'UTF-8') ?>">
                     <?= htmlspecialchars($message, ENT_QUOTES, 'UTF-8') ?>
                 </div>
             <?php endif; ?>
@@ -105,7 +53,7 @@ $currentPage = 'testimonials';
                         class="form-control"
                         id="customer_name"
                         name="customer_name"
-                        value="<?= htmlspecialchars($_POST['customer_name'] ?? '', ENT_QUOTES, 'UTF-8') ?>"
+                        value="<?= htmlspecialchars($old['customer_name'], ENT_QUOTES, 'UTF-8') ?>"
                         required
                     >
                 </div>
@@ -116,7 +64,7 @@ $currentPage = 'testimonials';
                         class="form-control"
                         id="email"
                         name="email"
-                        value="<?= htmlspecialchars($_POST['email'] ?? '', ENT_QUOTES, 'UTF-8') ?>"
+                        value="<?= htmlspecialchars($old['email'], ENT_QUOTES, 'UTF-8') ?>"
                         required
                     >
                     <div class="form-text">Your email will not be displayed publicly.</div>
@@ -129,7 +77,7 @@ $currentPage = 'testimonials';
                         name="content"
                         rows="4"
                         required
-                    ><?= htmlspecialchars($_POST['content'] ?? '', ENT_QUOTES, 'UTF-8') ?></textarea>
+                    ><?= htmlspecialchars($old['content'], ENT_QUOTES, 'UTF-8') ?></textarea>
                 </div>
                 <button type="submit" class="btn btn-dark">Submit Testimonial</button>
             </form>
