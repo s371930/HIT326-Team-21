@@ -1,8 +1,5 @@
 <?php
-/**
- * Products Controller
- * Fetches artwork data and loads the products listing view.
- */
+
 
 require_once __DIR__ . '/../models/Product.php';
 

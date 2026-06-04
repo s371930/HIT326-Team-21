@@ -73,7 +73,7 @@ include __DIR__ . '/admin-header.php';
     <!-- Quick navigation links to each management section -->
     <div class="list-group" style="max-width:400px;">
         <a href="products.php" class="list-group-item list-group-item-action">🖼 Manage Products</a>
-        <a href="news.php" class="list-group-item list-group-item-action">📰 Manage News</a>
+        <a href="dashboard.php" class="list-group-item list-group-item-action">📰 Manage News</a>
         <a href="testimonials.php" class="list-group-item list-group-item-action">
             💬 Moderate Testimonials
             <?php if ($pendingTestCount > 0): ?>

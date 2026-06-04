@@ -1,8 +1,4 @@
 <?php
-/**
- * Product Model
- * Handles all database queries related to artworks/products.
- */
 
 class Product
 {

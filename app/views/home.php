@@ -9,9 +9,7 @@
     </a>
 </div>
 
-<!-- ============================================ -->
-<!-- Latest News Section (Project Requirement A) -->
-<!-- ============================================ -->
+
 <section class="mb-5">
     <h2 class="mb-3">Latest News</h2>
 
@@ -29,13 +27,12 @@
         </div>
     <?php endif; ?>
 
-    <!-- No "read older posts" link — project requirement says readers
-         should NOT be able to read older posts -->
+   
 </section>
 
-<!-- ============================================ -->
-<!-- Featured Artworks Section                    -->
-<!-- ============================================ -->
+
+<!-- Featured Artworks Section   -->
+
 <section>
     <div class="d-flex justify-content-between align-items-center mb-3">
         <h2 class="mb-0">Featured Artworks</h2>

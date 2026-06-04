@@ -49,7 +49,7 @@
             <ul class="navbar-nav ms-auto">
                 <li class="nav-item"><a class="nav-link" href="index.php">Dashboard</a></li>
                 <li class="nav-item"><a class="nav-link" href="products.php">Products</a></li>
-                <li class="nav-item"><a class="nav-link" href="news.php">News</a></li>
+                <li class="nav-item"><a class="nav-link" href="dashboard.php">News</a></li>
                 <li class="nav-item"><a class="nav-link" href="testimonials.php">Testimonials</a></li>
                 <!-- Logout is styled red to make it visually distinct from navigation links -->
                 <li class="nav-item"><a class="nav-link text-danger" href="logout.php">Logout</a></li>
