@@ -53,7 +53,7 @@ class Mailer
         $body    = self::buildBuyerBody($order);
         $headers = self::buildHeaders($to);
 
-        return mail($to, $subject, $body, $headers);
+        return @mail($to, $subject, $body, $headers);
     }
 
     /**
@@ -74,7 +74,7 @@ class Mailer
         // Set Reply-To as the customer's email so the owner can reply directly
         $headers = self::buildHeaders($order['customer_email']);
 
-        return mail($to, $subject, $body, $headers);
+        return @mail($to, $subject, $body, $headers);
     }
 
 

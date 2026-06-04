@@ -16,7 +16,7 @@ Auth::start();
 $page = $_GET['page'] ?? 'home';
 
 // Only allow pages that exist (prevents directory traversal attacks)
-$allowed = ['home', 'products', 'product_detail', 'cart', 'checkout', 'order-confirmation'];
+$allowed = ['home', 'products', 'product_detail', 'cart', 'checkout', 'order-confirmation', 'testimonials'];
 
 if (!in_array($page, $allowed)) {
     $page = 'home';
