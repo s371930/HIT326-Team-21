@@ -13,7 +13,7 @@
  *   - Add a new product (POST action=add)
  *   - Edit an existing product (POST action=edit)
  *   - Soft-delete a product (POST action=delete)
- *
+ *   - Restore a soft-deleted product (POST action=restore)
  */
 
 require_once __DIR__ . '/../config.php';
@@ -30,7 +30,44 @@ $db           = Database::getInstance();
 
 // Holds success or error feedback message shown after an action
 $message = '';
-$msgType = 'success'; // Bootstrap alert type: success or danger
+$msgType = 'success';
+
+
+// Image upload helper — used by both add and edit actions
+// Returns the new filename on success, null if no file uploaded, or
+// sets $message and returns false on validation failure.
+
+function handleImageUpload(&$message, &$msgType): string|null|false
+{
+    // No file was selected — skip upload
+    if (empty($_FILES['image']['name'])) {
+        return null;
+    }
+
+    $uploadDir = __DIR__ . '/../assets/images/';
+    $ext       = strtolower(pathinfo($_FILES['image']['name'], PATHINFO_EXTENSION));
+    $allowed   = ['jpg', 'jpeg', 'png'];
+
+    // Validate file type
+    if (!in_array($ext, $allowed)) {
+        $message = 'Only JPG and PNG images are allowed.';
+        $msgType = 'danger';
+        return false;
+    }
+
+    // Validate file size — max 2MB
+    if ($_FILES['image']['size'] > 2 * 1024 * 1024) {
+        $message = 'Image must be under 2MB.';
+        $msgType = 'danger';
+        return false;
+    }
+
+    // Generate a unique filename to avoid overwriting existing images
+    $filename = uniqid('product_', true) . '.' . $ext;
+    move_uploaded_file($_FILES['image']['tmp_name'], $uploadDir . $filename);
+    return $filename;
+}
+
 
 // Handle form submissions (POST requests)
 
@@ -39,7 +76,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     // --- ADD a new product ---
     if ($action === 'add') {
-        // Sanitise and validate all required fields
         $name        = trim($_POST['name'] ?? '');
         $description = trim($_POST['description'] ?? '');
         $price       = $_POST['price'] ?? '';
@@ -51,13 +87,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $message = 'Name, description and price are required.';
             $msgType = 'danger';
         } else {
-            // Insert the new product — is_available defaults to 1 in the DB
-            $db->execute(
-                "INSERT INTO product (name, description, price, category, color, size, is_available, created_at)
-                 VALUES (?, ?, ?, ?, ?, ?, 1, NOW())",
-                [$name, $description, (float)$price, $category, $color, $size]
-            );
-            $message = 'Product added successfully.';
+            // Handle image upload — returns filename, null (no file), or false (error)
+            $imageFilename = handleImageUpload($message, $msgType);
+
+            if ($imageFilename !== false) {
+                // Insert the new product including image filename
+                $db->execute(
+                    "INSERT INTO product (name, description, price, category, color, size, image_filename, is_available, created_at)
+                     VALUES (?, ?, ?, ?, ?, ?, ?, 1, NOW())",
+                    [$name, $description, (float)$price, $category, $color, $size, $imageFilename]
+                );
+                $message = 'Product added successfully.';
+            }
         }
     }
 
@@ -75,13 +116,22 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $message = 'Invalid product data. Please try again.';
             $msgType = 'danger';
         } else {
-            // Update the product record using a prepared statement
-            $db->execute(
-                "UPDATE product SET name = ?, description = ?, price = ?, category = ?, color = ?, size = ?
-                 WHERE product_id = ?",
-                [$name, $description, (float)$price, $category, $color, $size, $productId]
-            );
-            $message = 'Product updated successfully.';
+            // Keep existing image by default — only replace if a new one is uploaded
+            $existingImage = $_POST['existing_image'] ?? null;
+            $uploadResult  = handleImageUpload($message, $msgType);
+            $imageFilename = ($uploadResult !== null && $uploadResult !== false)
+                ? $uploadResult
+                : $existingImage;
+
+            if ($uploadResult !== false) {
+                $db->execute(
+                    "UPDATE product SET name = ?, description = ?, price = ?, category = ?,
+                     color = ?, size = ?, image_filename = ?
+                     WHERE product_id = ?",
+                    [$name, $description, (float)$price, $category, $color, $size, $imageFilename, $productId]
+                );
+                $message = 'Product updated successfully.';
+            }
         }
     }
 
@@ -113,7 +163,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
 // Fetch ALL products including soft-deleted ones so admin can restore them
 $allProducts = $db->fetchAll(
-    "SELECT product_id, name, description, price, category, color, size, is_available
+    "SELECT product_id, name, description, price, category, color, size, image_filename, is_available
      FROM product
      ORDER BY is_available DESC, created_at DESC"
 );
@@ -122,15 +172,9 @@ $allProducts = $db->fetchAll(
 $editProduct = null;
 if (isset($_GET['edit'])) {
     $editId      = filter_input(INPUT_GET, 'edit', FILTER_VALIDATE_INT);
-    $editProduct = $editId ? $productModel->getById($editId) : null;
-
-    // If product is soft-deleted, fetch it directly since getById filters unavailable
-    if (!$editProduct && $editId) {
-        $editProduct = $db->fetchOne(
-            "SELECT * FROM product WHERE product_id = ?",
-            [$editId]
-        );
-    }
+    $editProduct = $editId ? $db->fetchOne(
+        "SELECT * FROM product WHERE product_id = ?", [$editId]
+    ) : null;
 }
 
 // Load the shared admin navbar and opening HTML
@@ -140,7 +184,6 @@ include __DIR__ . '/admin-header.php';
 <div class="container-fluid py-4">
     <div class="d-flex justify-content-between align-items-center mb-3">
         <h2>Manage Products</h2>
-        <!-- Button to show the Add Product form -->
         <button class="btn btn-dark" data-bs-toggle="collapse" data-bs-target="#addProductForm">
             + Add Product
         </button>
@@ -148,15 +191,18 @@ include __DIR__ . '/admin-header.php';
 
     <!-- Feedback message shown after an add/edit/delete action -->
     <?php if ($message !== ''): ?>
-        <div class="alert alert-<?= $msgType ?>"><?= htmlspecialchars($message, ENT_QUOTES, 'UTF-8') ?></div>
+        <div class="alert alert-<?= $msgType ?>">
+            <?= htmlspecialchars($message, ENT_QUOTES, 'UTF-8') ?>
+        </div>
     <?php endif; ?>
 
-    <!-- ADD PRODUCT FORM (collapsed by default, opens on button click)      -->
-    
+    <!-- ADD PRODUCT FORM                                                     -->
+  
     <div class="collapse mb-4" id="addProductForm">
         <div class="card card-body">
             <h5 class="mb-3">Add New Product</h5>
-            <form method="POST" action="products.php">
+            <!-- enctype required for file uploads -->
+            <form method="POST" action="products.php" enctype="multipart/form-data">
                 <input type="hidden" name="action" value="add">
                 <div class="row g-3">
                     <div class="col-md-6">
@@ -183,6 +229,11 @@ include __DIR__ . '/admin-header.php';
                         <label class="form-label">Size</label>
                         <input type="text" name="size" class="form-control">
                     </div>
+                    <div class="col-md-12">
+                        <label class="form-label">Product Image</label>
+                        <input type="file" name="image" class="form-control" accept="image/jpeg,image/png">
+                        <div class="form-text">Accepted formats: JPG, PNG. Max 2MB. Leave blank for no image.</div>
+                    </div>
                     <div class="col-12">
                         <button type="submit" class="btn btn-dark">Save Product</button>
                         <a href="products.php" class="btn btn-outline-secondary ms-2">Cancel</a>
@@ -193,14 +244,17 @@ include __DIR__ . '/admin-header.php';
     </div>
 
     
-    <!-- EDIT PRODUCT FORM (shown when admin clicks Edit on a product)       -->
-
+    <!-- EDIT PRODUCT FORM                                                    -->
+    
     <?php if ($editProduct): ?>
         <div class="card card-body mb-4 border-warning">
             <h5 class="mb-3">Edit Product — <?= htmlspecialchars($editProduct['name'], ENT_QUOTES, 'UTF-8') ?></h5>
-            <form method="POST" action="products.php">
+            <!-- enctype required for file uploads -->
+            <form method="POST" action="products.php" enctype="multipart/form-data">
                 <input type="hidden" name="action" value="edit">
                 <input type="hidden" name="product_id" value="<?= (int)$editProduct['product_id'] ?>">
+                <!-- Pass existing image filename so it is kept if no new image is uploaded -->
+                <input type="hidden" name="existing_image" value="<?= htmlspecialchars($editProduct['image_filename'] ?? '', ENT_QUOTES, 'UTF-8') ?>">
                 <div class="row g-3">
                     <div class="col-md-6">
                         <label class="form-label">Name *</label>
@@ -231,6 +285,19 @@ include __DIR__ . '/admin-header.php';
                         <input type="text" name="size" class="form-control"
                                value="<?= htmlspecialchars($editProduct['size'] ?? '', ENT_QUOTES, 'UTF-8') ?>">
                     </div>
+                    <div class="col-md-12">
+                        <label class="form-label">Product Image</label>
+                        <?php if (!empty($editProduct['image_filename'])): ?>
+                            <!-- Show current image preview -->
+                            <div class="mb-2">
+                                <img src="<?= BASE_URL ?>/assets/images/<?= htmlspecialchars($editProduct['image_filename'], ENT_QUOTES, 'UTF-8') ?>"
+                                     alt="Current image" style="max-height: 100px; border-radius: 4px;">
+                                <small class="d-block text-muted mt-1">Current: <?= htmlspecialchars($editProduct['image_filename'], ENT_QUOTES, 'UTF-8') ?></small>
+                            </div>
+                        <?php endif; ?>
+                        <input type="file" name="image" class="form-control" accept="image/jpeg,image/png">
+                        <div class="form-text">Upload a new image to replace the current one. Leave blank to keep existing.</div>
+                    </div>
                     <div class="col-12">
                         <button type="submit" class="btn btn-warning">Update Product</button>
                         <a href="products.php" class="btn btn-outline-secondary ms-2">Cancel</a>
@@ -250,6 +317,7 @@ include __DIR__ . '/admin-header.php';
             <table class="table table-hover bg-white">
                 <thead class="table-dark">
                     <tr>
+                        <th>Image</th>
                         <th>Name</th>
                         <th>Category</th>
                         <th>Price</th>
@@ -260,8 +328,17 @@ include __DIR__ . '/admin-header.php';
                 </thead>
                 <tbody>
                     <?php foreach ($allProducts as $product): ?>
-                        <!-- Grey out soft-deleted products so admin can see them but they're clearly unavailable -->
                         <tr class="<?= $product['is_available'] ? '' : 'table-secondary text-muted' ?>">
+                            <td>
+                                <?php if (!empty($product['image_filename'])): ?>
+                                    <!-- Show thumbnail in the table -->
+                                    <img src="<?= BASE_URL ?>/assets/images/<?= htmlspecialchars($product['image_filename'], ENT_QUOTES, 'UTF-8') ?>"
+                                         alt="<?= htmlspecialchars($product['name'], ENT_QUOTES, 'UTF-8') ?>"
+                                         style="width: 50px; height: 50px; object-fit: cover; border-radius: 4px;">
+                                <?php else: ?>
+                                    <span class="text-muted small">No image</span>
+                                <?php endif; ?>
+                            </td>
                             <td><?= htmlspecialchars($product['name'], ENT_QUOTES, 'UTF-8') ?></td>
                             <td><?= htmlspecialchars($product['category'] ?? '—', ENT_QUOTES, 'UTF-8') ?></td>
                             <td>$<?= number_format($product['price'], 2) ?></td>
@@ -274,12 +351,10 @@ include __DIR__ . '/admin-header.php';
                                 <?php endif; ?>
                             </td>
                             <td>
-                                <!-- Edit button links to same page with edit GET parameter -->
                                 <a href="products.php?edit=<?= (int)$product['product_id'] ?>"
                                    class="btn btn-sm btn-outline-dark me-1">Edit</a>
 
                                 <?php if ($product['is_available']): ?>
-                                    <!-- Soft-delete: hides product from public site without removing DB row -->
                                     <form method="POST" action="products.php" class="d-inline"
                                           onsubmit="return confirm('Remove this product from the store?');">
                                         <input type="hidden" name="action" value="delete">
@@ -287,7 +362,6 @@ include __DIR__ . '/admin-header.php';
                                         <button type="submit" class="btn btn-sm btn-outline-danger">Remove</button>
                                     </form>
                                 <?php else: ?>
-                                    <!-- Restore: makes the product visible on the public site again -->
                                     <form method="POST" action="products.php" class="d-inline">
                                         <input type="hidden" name="action" value="restore">
                                         <input type="hidden" name="product_id" value="<?= (int)$product['product_id'] ?>">
@@ -303,5 +377,4 @@ include __DIR__ . '/admin-header.php';
     <?php endif; ?>
 </div>
 
-<!-- Load the shared closing HTML and Bootstrap JS -->
 <?php include __DIR__ . '/admin-footer.php'; ?>
